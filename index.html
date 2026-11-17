@@ -1,0 +1,502 @@
+
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fruitie AI 🍓</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(135deg, #ffe4ed, #fff0f5, #ffe8d6);
+    color: #87445e;
+    min-height: 100vh;
+    padding: 25px 15px;
+}
+
+.container {
+    max-width: 850px;
+    margin: auto;
+}
+
+header {
+    text-align: center;
+    padding: 25px 10px;
+}
+
+.logo {
+    font-size: 18px;
+    color: #e66b98;
+    font-weight: bold;
+}
+
+h1 {
+    font-size: 38px;
+    color: #d94f83;
+    margin: 15px 0;
+}
+
+.subtitle {
+    color: #a97889;
+    font-size: 15px;
+}
+
+.card {
+    background: white;
+    border-radius: 25px;
+    padding: 30px;
+    box-shadow: 0 10px 30px #d9799825;
+}
+
+.upload-box {
+    border: 2px dashed #f2a2bd;
+    border-radius: 20px;
+    padding: 35px 15px;
+    text-align: center;
+    background: #fff8fb;
+}
+
+.upload-box.drag {
+    background: #ffe8f1;
+}
+
+.fruit {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+h2 {
+    font-size: 21px;
+    margin-bottom: 10px;
+}
+
+p {
+    color: #a97889;
+    font-size: 14px;
+}
+
+input[type="file"] {
+    display: none;
+}
+
+button, .upload-btn {
+    display: inline-block;
+    border: none;
+    background: linear-gradient(135deg, #f58bb1, #df5c8d);
+    color: white;
+    padding: 13px 24px;
+    border-radius: 30px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 8px 4px;
+}
+
+button:hover, .upload-btn:hover {
+    opacity: 0.85;
+}
+
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.secondary {
+    background: #fff;
+    color: #d94f83;
+    border: 1px solid #f2a2bd;
+}
+
+#preview {
+    display: none;
+    max-width: 100%;
+    max-height: 320px;
+    object-fit: contain;
+    border-radius: 15px;
+    margin: 15px auto;
+}
+
+.result-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 25px;
+}
+
+.result-box {
+    background: #fff7fa;
+    border: 1px solid #ffe0eb;
+    border-radius: 20px;
+    padding: 20px;
+    min-width: 0;
+}
+
+.result-box h3 {
+    margin-bottom: 15px;
+    color: #d94f83;
+}
+
+.prediction {
+    margin-bottom: 15px;
+}
+
+.prediction-info {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: bold;
+    margin-bottom: 7px;
+}
+
+.bar {
+    height: 12px;
+    background: #f8dce7;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #f6a2bd, #dc5c8e);
+    border-radius: 20px;
+    transition: width 0.4s;
+}
+
+#status {
+    margin-top: 18px;
+    color: #bd7892;
+    font-size: 13px;
+    text-align: center;
+}
+
+.placeholder {
+    color: #c28da3;
+    text-align: center;
+    padding: 35px 5px;
+}
+
+footer {
+    text-align: center;
+    padding: 25px;
+    color: #b18497;
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    h1 {
+        font-size: 30px;
+    }
+
+    .card {
+        padding: 17px;
+    }
+
+    .result-section {
+        grid-template-columns: 1fr;
+    }
+
+    .upload-box {
+        padding: 25px 10px;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+<header>
+    <div class="logo">🍓 FRUITIE AI 🍑</div>
+    <h1>ผลไม้ไหนเอ่ย?</h1>
+    <p class="subtitle">
+        อัปโหลดรูปภาพ แล้วให้ AI ช่วยทายกันเลย!
+    </p>
+</header>
+
+<div class="card">
+
+    <div class="upload-box" id="dropzone">
+
+        <div class="fruit">🍒🍓🍊</div>
+
+        <h2>เลือกรูปภาพของคุณ</h2>
+
+        <p>
+            รองรับ JPG, PNG และ WEBP
+            <br>
+            ใช้งานได้ทั้งมือถือ iPad และคอมพิวเตอร์
+        </p>
+
+        <label for="fileInput" class="upload-btn">
+            📷 เลือกรูปภาพ
+        </label>
+
+        <input
+            type="file"
+            id="fileInput"
+            accept="image/*"
+        >
+
+        <br>
+
+        <button id="analyzeBtn" disabled>
+            ✨ วิเคราะห์รูปภาพ
+        </button>
+
+        <button class="secondary" id="resetBtn">
+            เริ่มใหม่
+        </button>
+
+        <div id="status">
+            กำลังเตรียมโมเดล AI...
+        </div>
+
+    </div>
+
+    <div class="result-section">
+
+        <div class="result-box">
+
+            <h3>🖼️ รูปภาพที่เลือก</h3>
+
+            <div class="placeholder" id="placeholder">
+                รูปภาพของคุณจะแสดงตรงนี้ 🌷
+            </div>
+
+            <img id="preview" alt="รูปภาพที่อัปโหลด">
+
+        </div>
+
+        <div class="result-box">
+
+            <h3>💗 ผลการทำนาย</h3>
+
+            <div id="predictions">
+                <div class="placeholder">
+                    ผลการวิเคราะห์จะแสดงที่นี่
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<footer>
+    Made with 🍓 and a little AI magic
+</footer>
+
+</div>
+
+<script>
+
+// URL ของโมเดล Teachable Machine
+const URL = "https://teachablemachine.withgoogle.com/models/g2Cj2e0bxn/";
+
+let model = null;
+let selectedImage = null;
+
+const fileInput = document.getElementById("fileInput");
+const preview = document.getElementById("preview");
+const placeholder = document.getElementById("placeholder");
+const analyzeBtn = document.getElementById("analyzeBtn");
+const statusText = document.getElementById("status");
+const predictions = document.getElementById("predictions");
+const dropzone = document.getElementById("dropzone");
+
+// โหลดโมเดล AI
+async function loadModel() {
+    try {
+        statusText.textContent = "กำลังโหลดโมเดล AI...";
+
+        model = await tmImage.load(
+            URL + "model.json",
+            URL + "metadata.json"
+        );
+
+        statusText.textContent =
+            "พร้อมใช้งานแล้ว! เลือกรูปภาพได้เลย 💕";
+
+        analyzeBtn.disabled = !selectedImage;
+
+    } catch (error) {
+        console.error(error);
+
+        statusText.textContent =
+            "โหลดโมเดลไม่สำเร็จ กรุณารีเฟรชหน้าเว็บ";
+    }
+}
+
+// เลือกรูปภาพ
+function useFile(file) {
+
+    if (!file || !file.type.startsWith("image/")) {
+        statusText.textContent =
+            "กรุณาเลือกไฟล์รูปภาพเท่านั้น 🍓";
+        return;
+    }
+
+    if (selectedImage) {
+        URL.revokeObjectURL(selectedImage);
+    }
+
+    selectedImage = window.URL.createObjectURL(file);
+
+    preview.onload = () => {
+        preview.style.display = "block";
+        placeholder.style.display = "none";
+        analyzeBtn.disabled = !model;
+    };
+
+    preview.src = selectedImage;
+
+    predictions.innerHTML =
+        '<div class="placeholder">พร้อมวิเคราะห์แล้ว ✨</div>';
+
+    statusText.textContent = "เลือกรูปภาพเรียบร้อยแล้ว!";
+}
+
+// รับไฟล์จากอุปกรณ์
+fileInput.addEventListener("change", function(event) {
+    useFile(event.target.files[0]);
+});
+
+// รองรับการลากรูปภาพมาวาง
+["dragenter", "dragover"].forEach(eventName => {
+    dropzone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropzone.classList.add("drag");
+    });
+});
+
+["dragleave", "drop"].forEach(eventName => {
+    dropzone.addEventListener(eventName, event => {
+        event.preventDefault();
+        dropzone.classList.remove("drag");
+    });
+});
+
+dropzone.addEventListener("drop", event => {
+    useFile(event.dataTransfer.files[0]);
+});
+
+// วิเคราะห์รูปภาพ
+analyzeBtn.addEventListener("click", async function() {
+
+    if (!model || !preview.complete || !preview.naturalWidth) {
+        return;
+    }
+
+    analyzeBtn.disabled = true;
+
+    statusText.textContent =
+        "AI กำลังวิเคราะห์รูปภาพ... 🍑";
+
+    predictions.innerHTML =
+        '<div class="placeholder">กำลังประมวลผล...</div>';
+
+    try {
+
+        const result = await model.predict(preview);
+
+        // เรียงตามเปอร์เซ็นต์จากมากไปน้อย
+        result.sort((a, b) =>
+            b.probability - a.probability
+        );
+
+        predictions.innerHTML = "";
+
+        result.forEach((item, index) => {
+
+            const percent = item.probability * 100;
+
+            const prediction = document.createElement("div");
+            prediction.className = "prediction";
+
+            const info = document.createElement("div");
+            info.className = "prediction-info";
+
+            const name = document.createElement("span");
+            name.textContent =
+                (index === 0 ? "🏆 " : "") + item.className;
+
+            const value = document.createElement("span");
+            value.textContent = percent.toFixed(1) + "%";
+
+            const bar = document.createElement("div");
+            bar.className = "bar";
+
+            const fill = document.createElement("div");
+            fill.className = "bar-fill";
+            fill.style.width = percent + "%";
+
+            info.append(name, value);
+            bar.appendChild(fill);
+            prediction.append(info, bar);
+
+            predictions.appendChild(prediction);
+        });
+
+        statusText.textContent =
+            "วิเคราะห์เสร็จแล้ว! 💗";
+
+    } catch (error) {
+
+        console.error(error);
+
+        statusText.textContent =
+            "เกิดข้อผิดพลาด กรุณาลองใหม่";
+
+    } finally {
+
+        analyzeBtn.disabled = false;
+    }
+});
+
+// เริ่มต้นใหม่
+document.getElementById("resetBtn")
+.addEventListener("click", function() {
+
+    if (selectedImage) {
+        URL.revokeObjectURL(selectedImage);
+    }
+
+    selectedImage = null;
+    fileInput.value = "";
+
+    preview.removeAttribute("src");
+    preview.style.display = "none";
+
+    placeholder.style.display = "block";
+
+    predictions.innerHTML =
+        '<div class="placeholder">ผลการวิเคราะห์จะแสดงที่นี่ 🌷</div>';
+
+    analyzeBtn.disabled = true;
+
+    statusText.textContent = model
+        ? "พร้อมใช้งานแล้ว! เลือกรูปภาพได้เลย 💕"
+        : "กำลังเตรียมโมเดล AI...";
+});
+
+// เริ่มโหลดโมเดล
+loadModel();
+
+</script>
+
+</body>
+</html>
